@@ -202,23 +202,6 @@ def de_vaucouleurs_2d(x, y, par):
     res[res > soften] = soften
     return res
 
-# ----de Vaucouleurs profile-------------------------
-# def deVaucouleurs(x,y,xc,yc,counts,R,e,phi):
-    #theta   =phi*np.pi/180.
-
-    #xx      =x-xc
-    #yy      =y-yc
-    #rx      =xx*np.cos(theta)+yy*np.sin(theta)
-    #ry      =-xx*np.sin(theta)+yy*np.cos(theta)
-    #rr      =np.sqrt(rx*rx/(1.0-e)+ry*ry*(1.0-e))
-    #image   =counts*np.exp(-7.669*((rr/R)**0.25-1.0))
-    #soften  =counts*np.exp(-7.669*((0.02)**0.25-1.0))
-    #ix      =np.where(image>=soften)
-    # image[ix]=soften
-
-    # return image
-#--------------------------------------------------------------------
-
 
 def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs):
     dsx_sdss = 0.396         # pixel size of SDSS detector.
@@ -233,7 +216,7 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs):
     xi2, xi1 = np.meshgrid(xx01, xx02)
     #----------------------------------------------------------------------
     dsi = 0.03
-    g_source = pyfits.getdata("./439.0_149.482739_1.889989_processed.fits")
+    g_source = pyfits.getdata("./gals_sources/439.0_149.482739_1.889989_processed.fits")
     g_source = np.array(g_source, dtype="<d") * 10.0
     g_source[g_source <= 0.0001] = 1e-6
     #----------------------------------------------------------------------
@@ -246,8 +229,6 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs):
     re = re_sv(vd, zl, zs)  # Einstein radius of lens.
     # pha = 45.0      #Orintation of lens.
     lpar = np.asarray([xc1, xc2, q, rc, re, pha])
-    print lpar
-    #----------------------------------------------------------------------
     ai1, ai2, mua = lens_equation_sie(xi1, xi2, lpar)
 
     a11, a12 = np.gradient(ai1, dsx)
@@ -257,46 +238,6 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs):
 
     yi1 = xi1 - ai1
     yi2 = xi2 - ai2
-
-    g_limage = lv4.call_ray_tracing(g_source, yi1, yi2, ysc1, ysc2, dsi)
-    g_limage[g_limage <= 0.0001] = 1e-6
-    g_limage = p2p.cosccd2mag(g_limage)
-    g_limage = p2p.mag2sdssccd(g_limage)
-
-    # pl.figure()
-    # pl.contourf(g_limage)
-    # pl.colorbar()
-
-    #-------------------------------------------------------------
-    # Need to be Caliborate the mags
-    dA = Planck13.comoving_distance(zl).value * 1000. / (1 + zl)
-    Re = dA * np.sin(R * np.pi / 180. / 3600.)
-    counts = Brightness(Re, vd)
-    vpar = np.asarray([counts, R, xc1, xc2, q, pha])
-    #g_lens = deVaucouleurs(xi1,xi2,xc1,xc2,counts,R,1.0-q,pha)
-    g_lens = de_vaucouleurs_2d(xi1, xi2, vpar)
-
-    # pl.figure()
-    # pl.contourf(g_lens)
-    # pl.colorbar()
-
-    g_clean_ccd = g_lens * 0.0 + g_limage
-    output_filename = "./output_fits/clean_lensed_imgs.fits"
-    pyfits.writeto(output_filename, g_clean_ccd, clobber=True)
-    from scipy.ndimage.filters import gaussian_filter
-    #-------------------------------------------------------------
-    g_images_psf = gaussian_filter(g_clean_ccd, 2.0)
-    #g_images_psf = ss.convolve(g_clean_ccd,g_psf,mode="same")
-    #g_images_psf = g_clean_ccd
-    #-------------------------------------------------------------
-    # Need to be Caliborate the mags
-    g_noise = noise_map(nnn, nnn, np.sqrt(nstd), "Gaussian")
-    output_filename = "./output_fits/noise_map.fits"
-    pyfits.writeto(output_filename, g_noise, clobber=True)
-    g_final = g_images_psf + g_noise
-    #-------------------------------------------------------------
-    output_filename = "./output_fits/lensed_imgs_only.fits"
-    pyfits.writeto(output_filename, g_final, clobber=True)
 
     return xi1, xi2, yi1, yi2, kappa, mua
 
@@ -319,31 +260,22 @@ if __name__ == '__main__':
 
     levels = [-1.2, -0.8, -0.4, 0.0, 0.4, 0.8, 1.2, 1.6, 2.0]
 
-    kappa_out = np.loadtxt("./data_from_Quinn/kap_map.dat")
+    kappa_out = np.loadtxt("./fits_outputs/data_from_Quinn/bestfit_q0.5.logkappa")
 
     pl.figure(figsize=(8, 8))
     pl.contour(xf1, xf2, np.log10(kappa_in), levels, colors=('k',))
-    pl.contour(xf1, xf2, np.flipud(np.log10(kappa_out)), levels, colors=('r',))
+    pl.contour(xf1, xf2, kappa_out, levels, colors=('r',))
 
-    mua_out = np.loadtxt("./data_from_Quinn/mag_map.dat")
+    mua_out = np.loadtxt("./fits_outputs/data_from_Quinn/bestfit_q0.5.maglog")
 
     pl.figure(figsize=(8, 8))
     pl.contour(xf1, xf2, mua_in, colors=('k',))
-    pl.contour(xf1, xf2, np.flipud(mua_out), colors=('r',))
+    pl.contour(xf1, xf2, 10.0**mua_out, colors=('r',))
 
     pl.figure(figsize=(8, 8))
     pl.contour(yf1, yf2, mua_in, colors=('k',))
-    pl.contour(yf1, yf2, np.flipud(mua_out), colors=('r',))
+    pl.contour(yf1, yf2, 10.0**mua_out, colors=('r',))
 
-    #xpix1 = np.loadtxt("./data_from_Quinn/src_pixel.x")
-    #xpix2 = np.loadtxt("./data_from_Quinn/src_pixel.y")
-
-    vpix = np.loadtxt("./data_from_Quinn/src_pixel.dat")
-
-    print np.shape(vpix)
-
-    # pl.figure(figsize=(8,8))
-    # pl.contourf(xpix1,xpix2,vpix)
-    # pl.colorbar()
+    vpix = np.loadtxt("./fits_outputs/data_from_Quinn/src_pixel.dat")
 
     pl.show()

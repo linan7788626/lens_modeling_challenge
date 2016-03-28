@@ -2,14 +2,10 @@
 import numpy as np
 import libv4_cv as lv4
 import mycosmology as mm
-import scipy.signal as ss
 import astropy.io.fits as pyfits
 from astropy.cosmology import Planck13
-import pylab as pl
 import scipy.interpolate as sci
 import pixcos2pixsdss as p2p
-import congrid
-import matplotlib.cm as cm
 
 
 def rebin_psf(input_psf, new_shape):
@@ -27,19 +23,9 @@ def rebin_psf(input_psf, new_shape):
     yn = np.linspace(0, nyo - 1.0, nyn) + 0.5
     xn, yn = np.meshgrid(xn, yn)
 
-    # print np.max(xo),np.min(xo)
-    # print np.max(xn),np.min(xn)
-
     res = sci.griddata(np.array([xo, yo]).T, zo, (xn, yn), method='linear')
     return res
 
-
-# def re0_sigma(sigma):
-#    cv = 3e5
-#    Dds = 1.0
-#    Ds = 2.0
-#    res = 4.0*np.pi*(sigma/cv)**2.0*Dds/Ds
-#    return res
 
 nMgyCount_r = 0.004760406   # nanomaggies per count for SDSS detector.
 sky_r = 5.98          # SDSS typical r band sky
@@ -82,7 +68,8 @@ def make_r_coor(nc, dsx):
 def make_c_coor(nc, dsx):
 
     bsz = nc * dsx
-    x1, x2 = np.mgrid[0:(bsz - dsx):nc * 1j, 0:(bsz - dsx):nc * 1j] - bsz / 2.0 + dsx / 2.0
+    x1, x2 = np.mgrid[0:(bsz - dsx):nc * 1j, 0:(bsz - dsx):nc * 1j] \
+        - bsz / 2.0 + dsx / 2.0
     return x1, x2
 
 
@@ -217,6 +204,7 @@ def lensing_signals_sie(x1, x2, lpar):
 
     alpha1 = (a1 * cosa - a2 * sina) * re
     alpha2 = (a2 * cosa + a1 * sina) * re
+
     return alpha1, alpha2, kappa, shear1, shear2, mu
 
 
@@ -253,19 +241,19 @@ def Brightness(Re, Vd):
 
 
 def de_vaucouleurs_2d(x, y, par):
-    #[I0, Re, xc1,xc2,q,pha]
+    # [I0, Re, xc1,xc2,q,pha]
     # print "I0",par[0]
     # print "Re",par[1]
     (xnew, ynew) = xy_rotate(x, y, par[2], par[3], par[5])
     res0 = np.sqrt((xnew**2) * par[4] + (ynew**2) / par[4]) / par[1]
-    #res = par[0]*np.exp(-par[1]*res0**0.25)
+    # res = par[0]*np.exp(-par[1]*res0**0.25)
     res = par[0] * np.exp(-7.669 * (res0**0.25 - 1.0))
     soften = par[0] * np.exp(-7.669 * ((0.2)**0.25 - 1.0))
     res[res > soften] = soften
     return res
 
 
-def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs):
+def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=0):
     # dsx_sdss     = 0.396         # pixel size of SDSS detector.
     R = 3.0000     #
     nnn = 300  # Image dimension
@@ -276,38 +264,21 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs):
     xx01 = np.linspace(-bsz / 2.0, bsz / 2.0, nnn) + 0.5 * dsx
     xx02 = np.linspace(-bsz / 2.0, bsz / 2.0, nnn) + 0.5 * dsx
     xi2, xi1 = np.meshgrid(xx01, xx02)
-    #----------------------------------------------------------------------
+# ----------------------------------------------------------------------
     dsi = 0.03
-    g_source = pyfits.getdata(
-        "./source_galaxies/439.0_149.482739_1.889989_processed.fits")
+    g_source = pyfits.getdata("./gals_sources/439.0_149.482739_1.889989_processed.fits")
     g_source = np.array(g_source, dtype="<d") * 10.0
     g_source[g_source <= 0.0001] = 1e-6
-
-    pl.figure()
-    pl.contourf(g_source)
-    pl.colorbar()
-    #----------------------------------------------------------------------
+# ----------------------------------------------------------------------
     # x coordinate of the center of lens (in units of Einstein radius).
     xc1 = 0.0
     # y coordinate of the center of lens (in units of Einstein radius).
     xc2 = 0.0
-    # q   = 0.7       #Ellipticity of lens.
     rc = 0.0  # Core size of lens (in units of Einstein radius).
-    re = re_sv(vd, zl, zs) * 0.0  # Einstein radius of lens.
-    # pha = 45.0      #Orintation of lens.
+    re = re_sv(vd, zl, zs)  # Einstein radius of lens.
     lpar = np.asarray([xc1, xc2, q, rc, re, pha])
-    print lpar
-    #----------------------------------------------------------------------
-    ai1, ai2, mua = lens_equation_sie(xi1, xi2, lpar)
-
-    a11, a12 = np.gradient(ai1, dsx)
-    a21, a22 = np.gradient(ai2, dsx)
-
-    kappa_out = 0.5 * (a11 + a22)
-
-    pl.figure()
-    pl.contourf(np.log10(kappa_out))
-    pl.colorbar()
+# ----------------------------------------------------------------------
+    ai1, ai2, kappa_out, shr1, shr2, mua = lensing_signals_sie(xi1, xi2, lpar)
 
     yi1 = xi1 - ai1
     yi2 = xi2 - ai2
@@ -316,83 +287,58 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs):
     g_limage[g_limage <= 0.0001] = 1e-6
     g_limage = p2p.cosccd2mag(g_limage)
     g_limage = p2p.mag2sdssccd(g_limage)
-
-    # pl.figure()
-    # pl.contourf(g_limage)
-    # pl.colorbar()
-    output_filename = "./output_fits/unlensed_imgs_only.fits"
-    pyfits.writeto(output_filename, g_limage, clobber=True)
-
-    #-------------------------------------------------------------
-    # Need to be Caliborate the mags
-    dA = Planck13.comoving_distance(zl).value * 1000. / (1 + zl)
+# -------------------------------------------------------------
+    dA = Planck13.comoving_distance(zl).value * 1000. / (1.0 + zl)
     Re = dA * np.sin(R * np.pi / 180. / 3600.)
     counts = Brightness(Re, vd)
     vpar = np.asarray([counts, R, xc1, xc2, q, pha])
-    #g_lens = deVaucouleurs(xi1,xi2,xc1,xc2,counts,R,1.0-q,pha)
     g_lens = de_vaucouleurs_2d(xi1, xi2, vpar)
 
-    # pl.figure()
-    # pl.contourf(g_lens)
-    # pl.colorbar()
-
-    g_clean_ccd = g_lens * 0.0 + g_limage
-    output_filename = "./output_fits/clean_lensed_imgs.fits"
+    g_clean_ccd = g_lens * lens_tag + g_limage
+    output_filename = "./fits_outputs/clean_lensed_imgs.fits"
     pyfits.writeto(output_filename, g_clean_ccd, clobber=True)
+# -------------------------------------------------------------
     from scipy.ndimage.filters import gaussian_filter
-    #-------------------------------------------------------------
     g_images_psf = gaussian_filter(g_clean_ccd, 2.0)
-    #g_images_psf = ss.convolve(g_clean_ccd,g_psf,mode="same")
-    #g_images_psf = g_clean_ccd
-    #-------------------------------------------------------------
-    # Need to be Caliborate the mags
+# -------------------------------------------------------------
     g_noise = noise_map(nnn, nnn, np.sqrt(nstd), "Gaussian")
-    output_filename = "./output_fits/noise_map.fits"
+    output_filename = "./fits_outputs/noise_map.fits"
     pyfits.writeto(output_filename, g_noise, clobber=True)
     g_final = g_images_psf + g_noise
-    #-------------------------------------------------------------
-    output_filename = "./output_fits/lensed_imgs_only.fits"
+# -------------------------------------------------------------
+    output_filename = "./fits_outputs/lensed_imgs_only.fits"
     pyfits.writeto(output_filename, g_final, clobber=True)
-
-    # pl.figure()
-    # pl.contourf(g_final)
-    # pl.colorbar()
-    # pl.show()
 
     return 0
 
 if __name__ == '__main__':
-    #from mpi4py import MPI
-    #import sys
+    # from mpi4py import MPI
+    # import sys
     # sourcpos = 10.0 # arcsecs
-    #num_imgs = int(sys.argv[1])
+    # num_imgs = int(sys.argv[1])
     num_imgs = 1
     sourcpos = 0.0
 
-    #comm = MPI.COMM_WORLD
-    #size = comm.Get_size()
-    #rank = comm.Get_rank()
+    # comm = MPI.COMM_WORLD
+    # size = comm.Get_size()
+    # rank = comm.Get_rank()
 
-    #ysc1 = np.random.random(num_imgs)*sourcpos-sourcpos/2.0
-    #ysc2 = np.random.random(num_imgs)*sourcpos-sourcpos/2.0
-    #q = np.random.random(num_imgs)*0.5+0.5
-    #vd = np.random.random(num_imgs)*100.0+200.0
-    #pha = np.random.random(num_imgs)*360.0
-    #zl = 0.2
-    #zs = 1.0
+    # ysc1 = np.random.random(num_imgs)*sourcpos-sourcpos/2.0
+    # ysc2 = np.random.random(num_imgs)*sourcpos-sourcpos/2.0
+    # q = np.random.random(num_imgs)*0.5+0.5
+    # vd = np.random.random(num_imgs)*100.0+200.0
+    # pha = np.random.random(num_imgs)*360.0
+    # zl = 0.2
+    # zs = 1.0
 
     ysc1 = [0.4]
     ysc2 = [-0.3]
     zl = 0.298    # zl is the redshift of the lens galaxy.
     zs = 1.0
     vd = [320]    # Velocity Dispersion.
-    q = [0.9999999999]  # 0.5
-    pha = [0.0]         # -45.0
+    q = [0.5]  # 0.5
+    pha = [-45.0]         # -45.0
 
-    # for i in xrange(rank,num_imgs,size):
     # for i in xrange(rank,num_imgs,size):
     for i in xrange(num_imgs):
-        i = 0
         single_run_test(i, ysc1[i], ysc2[i], q[i], vd[i], pha[i], zl, zs)
-
-    pl.show()
