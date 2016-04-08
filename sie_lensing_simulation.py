@@ -185,14 +185,14 @@ def lensing_signals_sie(x1, x2, lpar):
     a12 = qs / (1.0 + fx1 * fx1) * fx12
     a21 = qs / (1.0 - fx2 * fx2) * fx21
 
-    kappa = 0.5 * (a11 + a22)
-    shear1 = 0.5 * (a12 + a21)
-    shear2 = 0.5 * (a11 - a22)
-
     rea11 = (a11 * cosa - a21 * sina) * re
     rea22 = (a22 * cosa + a12 * sina) * re
     rea12 = (a12 * cosa - a22 * sina) * re
     rea21 = (a21 * cosa + a11 * sina) * re
+
+    kappa = 0.5 * (rea11 + rea22)
+    shear1 = 0.5 * (rea12 + rea21)
+    shear2 = 0.5 * (rea11 - rea22)
 
     y11 = 1.0 - rea11
     y22 = 1.0 - rea22
