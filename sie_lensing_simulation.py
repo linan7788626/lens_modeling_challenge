@@ -5,7 +5,24 @@ import mycosmology as mm
 import astropy.io.fits as pyfits
 from astropy.cosmology import Planck13
 import scipy.interpolate as sci
-import pixcos2pixsdss as p2p
+
+
+gain = 4.7
+expsdss = 53.9
+aa_sdss = -24.149
+aa_cos = 25.523
+kk = 0.156347
+airmass = 1.201824
+
+
+def mag2sdssccd(image):
+    im_ccd = gain * expsdss * (10.0**((image + aa_sdss) / (-2.5)))
+    return im_ccd
+
+
+def cosccd2mag(image):
+    im_mag = -2.5 * np.log10(image) + aa_cos
+    return im_mag
 
 
 def rebin_psf(input_psf, new_shape):
@@ -208,6 +225,14 @@ def lensing_signals_sie(x1, x2, lpar):
     return alpha1, alpha2, kappa, shear1, shear2, mu
 
 
+def lensing_potential_sie(x1, x2, lpar, shear1, shear2, kappa):
+    xc = 0.0
+    phi0 = np.sqrt(x1 * x1 + x2 * x2 + xc * xc)
+    res = phi0 + shear1 / 2.0(x1 * x1 - x2 * x2) + shear2 * x1 * \
+        x2 + kappa / 2.0 * (x1 * x1 + x2 * x2)
+    return res
+
+
 def xy_rotate(x, y, xcen, ycen, phi):
     phirad = np.deg2rad(phi)
     xnew = (x - xcen) * np.cos(phirad) + (y - ycen) * np.sin(phirad)
@@ -266,7 +291,8 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=0):
     xi2, xi1 = np.meshgrid(xx01, xx02)
 # ----------------------------------------------------------------------
     dsi = 0.03
-    g_source = pyfits.getdata("./gals_sources/439.0_149.482739_1.889989_processed.fits")
+    g_source = pyfits.getdata(
+        "./gals_sources/439.0_149.482739_1.889989_processed.fits")
     g_source = np.array(g_source, dtype="<d") * 10.0
     g_source[g_source <= 0.0001] = 1e-6
 # ----------------------------------------------------------------------
@@ -285,8 +311,8 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=0):
 
     g_limage = lv4.call_ray_tracing(g_source, yi1, yi2, ysc1, ysc2, dsi)
     g_limage[g_limage <= 0.0001] = 1e-6
-    g_limage = p2p.cosccd2mag(g_limage)
-    g_limage = p2p.mag2sdssccd(g_limage)
+    g_limage = cosccd2mag(g_limage)
+    g_limage = mag2sdssccd(g_limage)
 # -------------------------------------------------------------
     dA = Planck13.comoving_distance(zl).value * 1000. / (1.0 + zl)
     Re = dA * np.sin(R * np.pi / 180. / 3600.)
