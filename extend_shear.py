@@ -1,56 +1,57 @@
+import numpy as np
+
+
 def deflect_SIE(lens, x, y):  # SIE lens model
-    tr = pi * (lens.th / 180.0) + pi / 2.0
-    sx = x − lens.x0
-    sy = y − lens.y0
+    x0 = 0.0
+    y0 = 0.0
+    pi = 3.14
+
+    tr = pi * (th / 180.0) + pi / 2.0
+
+    sx = x − x0
+    sy = y − y0
+
     cs = cos(tr)
     sn = sin(tr)
-    sx r = sx∗cs + sy∗sn
-    sy r = −sx∗sn + sy∗cs
-    psi = sqrt(lens.fl∗∗2.0 ∗ (lens.rc∗∗2.0 + sx r∗∗2.0) + sy r∗∗2.0)
-    dx tmp = (lens.bl∗sqrt(lens.fl) / sqrt(1.0−lens.fl∗∗2.0))∗ arctan(sqrt(1.0−lens.fl∗∗2.0)∗sx r / (psi + lens.rc))
-    dy tmp = (lens.bl∗sqrt(lens.fl) / sqrt(1.0−lens.fl∗∗2.0))∗arctanh(sqrt(1.0−lens.fl∗∗2.0)∗sy r / (psi + lens.rc∗lens.fl∗∗2.0))
-    dx = dx tmp∗cs − dy tmp∗sn dy = dx tmp∗sn + dy tmp∗cs
+    sx_r = sx * cs + sy * sn
+    sy_r = −sx * sn + sy * cs
+    psi = sqrt(lens.fl**2.0 * (lens.rc**2.0 + sx_r**2.0) + sy_r**2.0)
+    dx_tmp = (lens.bl * sqrt(lens.fl) / sqrt(1.0−lens.fl**2.0)) * arctan(sqrt(1.0−lens.fl**2.0) * sx_r / (psi + lens.rc))
+    dy_tmp = (lens.bl * sqrt(lens.fl) / sqrt(1.0−lens.fl**2.0)) * arctanh(sqrt(1.0−lens.fl**2.0) * sy_r / (psi + lens.rc * lens.fl**2.0))
+    dx = dx_tmp * cs − dy_tmp * sn
+    dy = dx_tmp * sn + dy_tmp * cs
     # external shear
-    tr2 = cs2 = sn2 =
-    dx2 = dy2 =
-    pi∗(lens.sa / 180.0) cos(2.0∗tr2) sin(2.0∗tr2)
-    lens.ss∗(cs2∗sx + sn2∗sy)
-    lens.ss∗(sn2∗sx−cs2∗sy)
+    tr2 = pi * (lens.sa / 180.0)
+    cs2 = cos(2.0 * tr2)
+    sn2 = sin(2.0 * tr2)
+    dx2 = lens.ss * (cs2 * sx + sn2 * sy)
+    dy2 = lens.ss * (sn2 * sx − cs2 * sy)
     return array([dx + dx2, dy + dy2])
-#############################################################################
-# Convergence for SIE + external shear #
-#############################################################################
 
-
-def convergence_SIE(lens, x, y):
-    tr = pi ∗(lens . th / 180.0) + pi / 2.0 72
-    sx = x−lens.x0
-    sy = y−lens.y0
-    cs = cos(tr)
-    sn = sin(tr)
-    sx r = sx∗cs + sy∗sn sy r = −sx∗sn + sy∗cs
-    psi = sqrt(lens.fl∗∗2.0 ∗ (lens.rc∗∗2.0 + sx r∗∗2.0) + sy r∗∗2.0) kappa tmp = (0.5∗lens.bl∗sqrt(lens.fl) / psi)
-    return kappa tmp
-#
+#############################################################################
 # Potential for SIE + external shear #
 #############################################################################
 
 
 def potential(lens, x, y):  # SIE lens model
-    tr = pi ∗(lens . th / 180.0) + pi / 2.0 sx = x−lens.x0
-    sy = y−lens.y0 cs = cos(tr)
+    tr = np.pi * (lens.th / 180.0) + np.pi / 2.0
+    sx = x − lens.x0
+    sy = y − lens.y0
+    cs = cos(tr)
     sn = sin(tr)
-    sx r = sx∗cs + sy∗sn
-    sy r = −sx∗sn + sy∗cs
-    psi = sqrt(lens.fl∗∗2.0 ∗ (lens.rc∗∗2.0 + sx r∗∗2.0) + sy r∗∗2.0)
-    dx tmp = (lens.bl∗sqrt(lens.fl) / sqrt(1.0−lens.fl∗∗2.0))∗ arctan(sqrt(1.0−lens.fl∗∗2.0)∗sx r / (psi + lens.rc))
-    dy tmp = (lens.bl∗sqrt(lens.fl) / sqrt(1.0−lens.fl∗∗2.0))∗arctanh(sqrt(1.0−lens.fl∗∗2.0)∗sy r / (psi + lens.rc∗lens.fl∗∗2.0))
-    pot SIE = sx r∗dx tmp + sy r∗dy tmp − 0.5∗lens.bl∗sqrt(lens.fl)∗ lens.rc∗log((psi + lens.rc)∗∗2.0 + (1.0−(lens.fl∗∗2.0))∗(sx r∗∗2.0))
+    sx_r = sx * cs + sy * sn
+    sy_r = −sx * sn + sy * cs
+    psi = sqrt(lens.fl**2.0 * (lens.rc**2.0 + sx_r**2.0) + sy_r**2.0)
+    dx_tmp = (lens.bl * sqrt(lens.fl) / sqrt(1.0−lens.fl**2.0)) * arctan(sqrt(1.0−lens.fl**2.0) * sx_r / (psi + lens.rc))
+    dy_tmp = (lens.bl * sqrt(lens.fl) / sqrt(1.0−lens.fl**2.0)) * arctanh(sqrt(1.0−lens.fl**2.0) * sy_r / (psi + lens.rc * lens.fl**2.0))
+    pot_SIE = sx_r * dx_tmp + sy_r * dy_tmp − 0.5 * lens.bl * sqrt(lens.fl) * lens.rc * log((psi + lens.rc)**2.0 + (1.0−(lens.fl**2.0)) * (sx_r**2.0))
 
     # external shear
-    tr2 = pi∗(lens.sa / 180.0) cs2 = cos(2.0∗ tr2)
-    sn2 = sin(2.0∗tr2)
-    pot exts = lens . ss∗(sn2∗sx∗sy + 0.5∗cs2∗(sx∗∗2.0−sy∗∗2.0))
+    tr2 = pi * (lens.sa / 180.0)
+    cs2 = cos(2.0 * tr2)
+    sn2 = sin(2.0 * tr2)
+    pot_exts = lens.ss * (sn2 * sx * sy + 0.5 * cs2 * (sx**2.0−sy**2.0))
+    pot_kaps = lens.kk * (sx**2.0 + sy**2.0) * 0.5
     return pot_SIE + pot_exts
 
 
