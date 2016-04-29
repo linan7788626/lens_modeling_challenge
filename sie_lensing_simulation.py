@@ -5,6 +5,8 @@ import mycosmology as mm
 import astropy.io.fits as pyfits
 from astropy.cosmology import Planck13
 import scipy.interpolate as sci
+import pot_ext_shears_kappa as psk
+import pylab as pl
 
 
 gain = 4.7
@@ -225,14 +227,6 @@ def lensing_signals_sie(x1, x2, lpar):
     return alpha1, alpha2, kappa, shear1, shear2, mu
 
 
-def lensing_potential_sie(x1, x2, lpar, shear1, shear2, kappa):
-    xc = 0.0
-    phi0 = np.sqrt(x1 * x1 + x2 * x2 + xc * xc)
-    res = phi0 + shear1 / 2.0(x1 * x1 - x2 * x2) + shear2 * x1 * \
-        x2 + kappa / 2.0 * (x1 * x1 + x2 * x2)
-    return res
-
-
 def xy_rotate(x, y, xcen, ycen, phi):
     phirad = np.deg2rad(phi)
     xnew = (x - xcen) * np.cos(phirad) + (y - ycen) * np.sin(phirad)
@@ -286,9 +280,7 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=0):
     dsx = bsz / nnn         # pixel size of SDSS detector.
     nstd = 59  # ^2
 
-    xx01 = np.linspace(-bsz / 2.0, bsz / 2.0, nnn) + 0.5 * dsx
-    xx02 = np.linspace(-bsz / 2.0, bsz / 2.0, nnn) + 0.5 * dsx
-    xi2, xi1 = np.meshgrid(xx01, xx02)
+    xi1, xi2 = make_r_coor(nnn, dsx)
 # ----------------------------------------------------------------------
     dsi = 0.03
     g_source = pyfits.getdata(
@@ -302,9 +294,23 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=0):
     xc2 = 0.0
     rc = 0.0  # Core size of lens (in units of Einstein radius).
     re = re_sv(vd, zl, zs)  # Einstein radius of lens.
-    lpar = np.asarray([xc1, xc2, q, rc, re, pha])
+    ext_shears = 0.1
+    ext_angle = 0.0
+    ext_kappa = 0.2
 # ----------------------------------------------------------------------
-    ai1, ai2, kappa_out, shr1, shr2, mua = lensing_signals_sie(xi1, xi2, lpar)
+    #lpar = np.asarray([xc1, xc2, q, rc, re, pha])
+    #ai1, ai2, kappa_out, shr1, shr2, mua = lensing_signals_sie(xi1, xi2, lpar)
+    #ar = np.sqrt(ai1 * ai1 + ai2 * ai2)
+    #pl.figure()
+    #pl.contourf(ar)
+    #pl.colorbar()
+
+    #psi_nie = psk.potential_nie(xc1, xc2, pha, q, re, rc, ext_shears, ext_angle,
+    #                            ext_kappa, xi1, xi2)
+    #ai1, ai2 = np.gradient(psi_nie, dsx)
+
+    ai1, ai2 = psk.deflection_nie(xc1, xc2, pha, q, re, rc, ext_shears, ext_angle,
+                                  ext_kappa, xi1, xi2)
 
     yi1 = xi1 - ai1
     yi2 = xi2 - ai2
@@ -368,3 +374,4 @@ if __name__ == '__main__':
     # for i in xrange(rank,num_imgs,size):
     for i in xrange(num_imgs):
         single_run_test(i, ysc1[i], ysc2[i], q[i], vd[i], pha[i], zl, zs)
+    pl.show()
