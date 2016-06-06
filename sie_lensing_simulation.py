@@ -9,6 +9,11 @@ import pot_ext_shears_kappa as psk
 import pylab as pl
 
 
+def a_b_bh(b, bh):
+    res = np.sqrt(b * bh)
+    return res
+
+
 gain = 4.7
 expsdss = 53.9
 aa_sdss = -24.149
@@ -294,6 +299,8 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=0):
     xc2 = 0.0
     rc = 0.0  # Core size of lens (in units of Einstein radius).
     re = re_sv(vd, zl, zs)  # Einstein radius of lens.
+    re_sub = 0.05 * re
+    a_sub = a_b_bh(re_sub, re)
     ext_shears = 0.1
     ext_angle = 0.0
     ext_kappa = 0.2
@@ -301,24 +308,32 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=0):
     #lpar = np.asarray([xc1, xc2, q, rc, re, pha])
     #ai1, ai2, kappa_out, shr1, shr2, mua = lensing_signals_sie(xi1, xi2, lpar)
     #ar = np.sqrt(ai1 * ai1 + ai2 * ai2)
-    #pl.figure()
-    #pl.contourf(ar)
-    #pl.colorbar()
 
-    #psi_nie = psk.potential_nie(xc1, xc2, pha, q, re, rc, ext_shears, ext_angle,
+    # psi_nie = psk.potential_nie(xc1, xc2, pha, q, re, rc, ext_shears, ext_angle,
     #                            ext_kappa, xi1, xi2)
     #ai1, ai2 = np.gradient(psi_nie, dsx)
 
     ai1, ai2 = psk.deflection_nie(xc1, xc2, pha, q, re, rc, ext_shears, ext_angle,
                                   ext_kappa, xi1, xi2)
 
-    yi1 = xi1 - ai1
-    yi2 = xi2 - ai2
+    as1, as2 = psk.deflection_sub_pJaffe(0.0, -2.169, re_sub, 0.0, a_sub, xi1, xi2)
+
+    yi1 = xi1 - ai1 - as1
+    yi2 = xi2 - ai2 - as2
 
     g_limage = lv4.call_ray_tracing(g_source, yi1, yi2, ysc1, ysc2, dsi)
-    g_limage[g_limage <= 0.0001] = 1e-6
+    g_limage[g_limage <= 0.25] = 1e-6
+
+    pl.figure()
+    pl.contourf(g_limage)
+    pl.colorbar()
+
     g_limage = cosccd2mag(g_limage)
     g_limage = mag2sdssccd(g_limage)
+
+    pl.figure()
+    pl.contourf(g_limage)
+    pl.colorbar()
 # -------------------------------------------------------------
     dA = Planck13.comoving_distance(zl).value * 1000. / (1.0 + zl)
     Re = dA * np.sin(R * np.pi / 180. / 3600.)
@@ -340,6 +355,10 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=0):
 # -------------------------------------------------------------
     output_filename = "./fits_outputs/lensed_imgs_only.fits"
     pyfits.writeto(output_filename, g_final, clobber=True)
+
+    pl.figure()
+    pl.contourf(g_final)
+    pl.colorbar()
 
     return 0
 
