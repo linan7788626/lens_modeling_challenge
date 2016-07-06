@@ -372,7 +372,7 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=1):
     g_limage = mag2sdssccd(g_limage)
 
     pl.figure()
-    pl.contourf(g_limage)
+    pl.contourf(xi1,xi2,g_limage)
     pl.colorbar()
 # -------------------------------------------------------------
     dA = Planck13.comoving_distance(zl).value * 1000. / (1.0 + zl)
@@ -383,21 +383,21 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=1):
 
     g_clean_ccd = g_lens * lens_tag + g_limage
     output_filename = "./fits_outputs/clean_lensed_imgs.fits"
-    pyfits.writeto(output_filename, g_clean_ccd, clobber=True)
+    #pyfits.writeto(output_filename, g_clean_ccd, clobber=True)
 # -------------------------------------------------------------
     from scipy.ndimage.filters import gaussian_filter
     g_images_psf = gaussian_filter(g_clean_ccd, 2.0)
 # -------------------------------------------------------------
     g_noise = noise_map(nnn, nnn, np.sqrt(nstd), "Gaussian")
     output_filename = "./fits_outputs/noise_map.fits"
-    pyfits.writeto(output_filename, g_noise, clobber=True)
+    #pyfits.writeto(output_filename, g_noise, clobber=True)
     g_final = g_images_psf + g_noise
 # -------------------------------------------------------------
     output_filename = "./fits_outputs/lensed_imgs_only.fits"
-    pyfits.writeto(output_filename, g_final, clobber=True)
+    #pyfits.writeto(output_filename, g_final, clobber=True)
 
     pl.figure()
-    pl.contourf(g_final)
+    pl.contourf(xi1,xi2,g_final)
     pl.colorbar()
 
     return 0

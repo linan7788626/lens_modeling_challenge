@@ -276,45 +276,6 @@ def de_vaucouleurs_2d(x, y, par):
     res[res > soften] = soften
     return res
 
-def cc_for_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=1):
-    # dsx_sdss     = 0.396         # pixel size of SDSS detector.
-    R = 3.0000     #
-    nnn = 300  # Image dimension
-    bsz = 9.0  # arcsecs
-    dsx = bsz / nnn         # pixel size of SDSS detector.
-    nstd = 59  # ^2
-
-    xi1, xi2 = make_r_coor(nnn, dsx)
-# ----------------------------------------------------------------------
-    # x coordinate of the center of lens (in units of Einstein radius).
-    xc1 = 0.0
-    # y coordinate of the center of lens (in units of Einstein radius).
-    xc2 = 0.0
-    rc = 0.0  # Core size of lens (in units of Einstein radius).
-    re = re_sv(vd, zl, zs)  # Einstein radius of lens.
-    re_sub = 0.05 * re
-    a_sub = a_b_bh(re_sub, re)
-    ext_shears = 0.1
-    ext_angle = 0.0
-    ext_kappa = 0.2
-
-# ----------------------------------------------------------------------
-
-    ai1, ai2 = psk.deflection_nie(xc1, xc2, pha, q, re, rc, ext_shears, ext_angle,
-                                  ext_kappa, xi1, xi2)
-
-    as1, as2 = psk.deflection_sub_pJaffe(0.0, -2.169, re_sub, 0.0, a_sub, xi1, xi2)
-
-    al1 =  ai1 + as1
-    al2 =  ai2 + as2
-
-    al11,al12 = np.gradient(al1,dsx)
-    al21,al22 = np.gradient(al2,dsx)
-
-    mua = 1.0/(1.0-(al11+al22)+al11*al22-al12*al21)
-
-    return xi1,xi2, al1, al2, mua
-
 
 def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=1):
     # dsx_sdss     = 0.396         # pixel size of SDSS detector.
@@ -337,13 +298,14 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=1):
     # y coordinate of the center of lens (in units of Einstein radius).
     xc2 = 0.0
     rc = 0.0  # Core size of lens (in units of Einstein radius).
-    re = re_sv(vd, zl, zs)  # Einstein radius of lens.
+    #re = re_sv(vd, zl, zs)  # Einstein radius of lens.
+    re = 1.4  # Einstein radius of lens.
+
     re_sub = 0.05 * re
     a_sub = a_b_bh(re_sub, re)
-    ext_shears = 0.1
+    ext_shears = 0.0
     ext_angle = 0.0
-    ext_kappa = 0.2
-
+    ext_kappa = 0.0
 # ----------------------------------------------------------------------
     #lpar = np.asarray([xc1, xc2, q, rc, re, pha])
     #ai1, ai2, kappa_out, shr1, shr2, mua = lensing_signals_sie(xi1, xi2, lpar)
@@ -356,7 +318,7 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=1):
     ai1, ai2 = psk.deflection_nie(xc1, xc2, pha, q, re, rc, ext_shears, ext_angle,
                                   ext_kappa, xi1, xi2)
 
-    as1, as2 = psk.deflection_sub_pJaffe(0.0, -2.169, re_sub, 0.0, a_sub, xi1, xi2)
+    as1, as2 = psk.deflection_sub_pJaffe(0.0, -2.169, re_sub*0.0, 0.0, a_sub, xi1, xi2)
 
     yi1 = xi1 - ai1 - as1
     yi2 = xi2 - ai2 - as2
@@ -365,40 +327,46 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=1):
     g_limage[g_limage <= 0.25] = 1e-6
 
     pl.figure()
-    pl.contourf(g_limage)
+    pl.contourf(xi1,xi2,g_limage)
     pl.colorbar()
 
-    g_limage = cosccd2mag(g_limage)
-    g_limage = mag2sdssccd(g_limage)
+    ai11, ai12 = np.gradient(ai1+as1,dsx)
+    ai21, ai22 = np.gradient(ai2+as2,dsx)
 
-    pl.figure()
-    pl.contourf(g_limage)
-    pl.colorbar()
-# -------------------------------------------------------------
-    dA = Planck13.comoving_distance(zl).value * 1000. / (1.0 + zl)
-    Re = dA * np.sin(R * np.pi / 180. / 3600.)
-    counts = Brightness(Re, vd)
-    vpar = np.asarray([counts, R, xc1, xc2, q, pha])
-    g_lens = de_vaucouleurs_2d(xi1, xi2, vpar)
+    mu = 1.0/(1.0-(ai11+ai22)+ai11*ai22-ai12*ai21)
+    pl.contour(xi1,xi2,mu)
 
-    g_clean_ccd = g_lens * lens_tag + g_limage
-    output_filename = "./fits_outputs/clean_lensed_imgs.fits"
-    pyfits.writeto(output_filename, g_clean_ccd, clobber=True)
-# -------------------------------------------------------------
-    from scipy.ndimage.filters import gaussian_filter
-    g_images_psf = gaussian_filter(g_clean_ccd, 2.0)
-# -------------------------------------------------------------
-    g_noise = noise_map(nnn, nnn, np.sqrt(nstd), "Gaussian")
-    output_filename = "./fits_outputs/noise_map.fits"
-    pyfits.writeto(output_filename, g_noise, clobber=True)
-    g_final = g_images_psf + g_noise
-# -------------------------------------------------------------
-    output_filename = "./fits_outputs/lensed_imgs_only.fits"
-    pyfits.writeto(output_filename, g_final, clobber=True)
+    #g_limage = cosccd2mag(g_limage)
+    #g_limage = mag2sdssccd(g_limage)
 
-    pl.figure()
-    pl.contourf(g_final)
-    pl.colorbar()
+    #pl.figure()
+    #pl.contourf(g_limage)
+    #pl.colorbar()
+## -------------------------------------------------------------
+    #dA = Planck13.comoving_distance(zl).value * 1000. / (1.0 + zl)
+    #Re = dA * np.sin(R * np.pi / 180. / 3600.)
+    #counts = Brightness(Re, vd)
+    #vpar = np.asarray([counts, R, xc1, xc2, q, pha])
+    #g_lens = de_vaucouleurs_2d(xi1, xi2, vpar)
+
+    #g_clean_ccd = g_lens * lens_tag + g_limage
+    #output_filename = "./fits_outputs/clean_lensed_imgs.fits"
+    #pyfits.writeto(output_filename, g_clean_ccd, clobber=True)
+## -------------------------------------------------------------
+    #from scipy.ndimage.filters import gaussian_filter
+    #g_images_psf = gaussian_filter(g_clean_ccd, 2.0)
+## -------------------------------------------------------------
+    #g_noise = noise_map(nnn, nnn, np.sqrt(nstd), "Gaussian")
+    ##output_filename = "./fits_outputs/noise_map.fits"
+    ##pyfits.writeto(output_filename, g_noise, clobber=True)
+    #g_final = g_images_psf + g_noise
+## -------------------------------------------------------------
+    ##output_filename = "./fits_outputs/lensed_imgs_only.fits"
+    ##pyfits.writeto(output_filename, g_final, clobber=True)
+
+    #pl.figure()
+    #pl.contourf(g_final)
+    #pl.colorbar()
 
     return 0
 
@@ -422,13 +390,13 @@ if __name__ == '__main__':
     # zl = 0.2
     # zs = 1.0
 
-    ysc1 = [0.4]
-    ysc2 = [-0.3]
+    ysc1 = [0.0]
+    ysc2 = [0.0]
     zl = 0.298    # zl is the redshift of the lens galaxy.
     zs = 1.0
     vd = [320]    # Velocity Dispersion.
     q = [0.5]  # 0.5
-    pha = [-45.0]         # -45.0
+    pha = [0.0]         # -45.0
 
     # for i in xrange(rank,num_imgs,size):
     for i in xrange(num_imgs):
