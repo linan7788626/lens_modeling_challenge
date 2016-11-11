@@ -338,6 +338,7 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=1):
     xc2 = 0.0
     rc = 0.0  # Core size of lens (in units of Einstein radius).
     re = re_sv(vd, zl, zs)  # Einstein radius of lens.
+    print "re = ", re
     re_sub = 0.05 * re
     a_sub = a_b_bh(re_sub, re)
     ext_shears = 0.1
