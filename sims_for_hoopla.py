@@ -278,11 +278,9 @@ def de_vaucouleurs_2d(x, y, par):
 
 def cc_for_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=1):
     # dsx_sdss     = 0.396         # pixel size of SDSS detector.
-    R = 3.0000     #
     nnn = 300  # Image dimension
     bsz = 9.0  # arcsecs
     dsx = bsz / nnn         # pixel size of SDSS detector.
-    nstd = 59  # ^2
 
     xi1, xi2 = make_r_coor(nnn, dsx)
 # ----------------------------------------------------------------------
@@ -318,7 +316,7 @@ def cc_for_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=1):
 
 def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=1):
     # dsx_sdss     = 0.396         # pixel size of SDSS detector.
-    R = 3.0000     #
+    R = 3.0
     nnn = 400  # Image dimension
     bsz = 9.0  # arcsecs
     dsx = bsz / nnn         # pixel size of SDSS detector.
@@ -341,13 +339,13 @@ def single_run_test(ind, ysc1, ysc2, q, vd, pha, zl, zs, lens_tag=1):
     print "re = ", re
     re_sub = 0.0 * re
     a_sub = a_b_bh(re_sub, re)
-    # ext_shears = 0.1
-    # ext_angle = 0.0
-    # ext_kappa = 0.2
+    ext_shears = 0.06
+    ext_angle = -0.39
+    ext_kappa = 0.08
 
-    ext_shears = 0.0
-    ext_angle = 0.0
-    ext_kappa = 0.0
+    # ext_shears = 0.0
+    # ext_angle = 0.0
+    # ext_kappa = 0.0
 
 # ----------------------------------------------------------------------
     #lpar = np.asarray([xc1, xc2, q, rc, re, pha])
@@ -438,8 +436,8 @@ if __name__ == '__main__':
     zl = 0.298    # zl is the redshift of the lens galaxy.
     zs = 1.0
     vd = [320]    # Velocity Dispersion.
-    q = [0.5]  # 0.5
-    pha = [-45.0]         # -45.0
+    q = [0.64]  # 0.5
+    pha = [73.0]         # -45.0
 
     # for i in xrange(rank,num_imgs,size):
     for i in xrange(num_imgs):
